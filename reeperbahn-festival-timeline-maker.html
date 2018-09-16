@@ -1,0 +1,210 @@
+<html>
+<body>
+
+<!--
+
+INSTRUCTIONS:
+
+1) Open https://www.reeperbahnfestival.com/de/festival/programm/sor/time/vie/list
+
+2) Press Ctrl-Shift-I (or Cmd-Shift-I) and go to the "Elements" tab
+
+3) Right-click on <div class="wrapper">, select Copy -> Copy outerHTML
+
+4) In this HTML page (not the Reeperbahn Festival page), click in front of "PASTE HERE"
+	and press Ctrl-V (or Cmd-V).
+	
+5) Save this HTML page
+
+6) Double-click this HTML page in the Explorer (or Finder)
+
+7) You have your personal timeline! :-)
+
+-->
+
+
+<div class="raw-data">
+
+	<!-- PASTE HERE -->
+
+</div>
+
+
+
+
+
+
+
+
+
+<style>
+* {font-family:inherit; font-size:inherit}
+body {font-family:Arial; font-size:11px}
+.raw-data {display:none}
+.output {display:flex; flex-direction:column}
+.location {display:flex; flex-direction:row; width:5000px; border:1px solid #ccc}
+.location__name {flex:0 0 200px; overflow:hidden; white-space:nowrap}
+.location__hours {flex:1 0 0px; display:flex; flex-direction:row; position:relative}
+.location__hour {flex:1 0 0px; border-left:1px solid #ccc}
+.location__event {position:absolute; background:#f1f1f1; white-space:nowrap}
+.location__event a {text-decoration:inherit; color:inherit}
+.location__event--favorite {background:#fda0cb}
+.location__event--favorite.location__event--non-music {background:#7fd6d2}
+</style>
+
+<label><input type="checkbox" class="js_favorites" checked>Nur Favorisierte</label>
+
+<div class="output">
+</div>
+
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.12/handlebars.min.js"></script>
+
+<script id="main-template" type="text/x-handlebars-template">
+	<div class="location">
+		<div class="location__name">&nbsp;</div>
+		<div class="location__hours">
+			{{#each dates}}
+				{{#each ../hours}}<div class="location__hour">{{#if (eq this 0)}}{{../weekday}}{{else}}{{this}}{{/if}}</div>{{/each}}
+			{{/each}}
+		</div>
+	</div>
+	{{#each locations}}
+		{{#if (or (not ../favoritesOnly) hasFavorite)}}
+			<div class="location">
+				<div class="location__name" title="{{name}}">{{name}}</div>
+				<div class="location__hours">
+					{{#each ../dates}}
+						{{#each ../../hours}}<div class="location__hour"></div>{{/each}}
+					{{/each}}
+					{{#each events}}
+						{{#if (or (not ../../favoritesOnly) favorite)}}
+							<div class="location__event{{#if favorite}} location__event--favorite{{/if}}{{#unless music}} location__event--non-music{{/unless}}" style="left: {{left}}%; width: {{width}}%" title="{{name}}"><a href="{{link}}" target="_blank">{{name}}</a></div>
+						{{/if}}
+					{{/each}}
+				</div>
+			</div>
+		{{/if}}
+	{{/each}}
+</script>
+
+<script type="text/javascript">
+var MAIN_TEMPLATE = Handlebars.compile($('#main-template').html());
+
+Handlebars.registerHelper("eq", function(value1, value2) {
+	return value1 == value2;
+});
+
+Handlebars.registerHelper("or", function(value1, value2) {
+	return value1 || value2;
+});
+
+Handlebars.registerHelper("not", function(value) {
+	return !value;
+});
+
+var locations = [];
+var locationsByName = {};
+var dates = [];
+var datesKnown = {};
+
+var events = [];
+$('.program-list__list--tile').each(function() {
+	var locationName = $(this).find('.program-list__list--content-el__loc').find('p:nth(0)').text().trim();
+	var location = locationsByName[locationName];
+	if (!location) {
+		location = {name: locationName, events: [], hasFavorite: false};
+		locationsByName[locationName] = location;
+		locations.push(location);
+	}
+
+	var event = {
+		name: $(this).find('h4').text().trim(),
+		link: $(this).find('h4 a').attr('href'),
+		type: $(this).find('.content-el__title__categories').text().trim(),
+		genre: $(this).find('.content-el__title__genres').text().trim(),
+		location: location,
+		favorite: $(this).find('.def-favbtn__faved').length > 0
+	};
+
+	if (event.favorite) {
+		location.hasFavorite = true;
+	}
+
+	event.music = event.type.toLowerCase() === 'music';
+
+	$(this).find('.program-list__list--content-el__date p').each(function() {
+		var value = $(this).text().trim();
+
+		var match = value.match(/([0-9]+):([0-9]+) ?[–-] ?([0-9]+):([0-9]+).*/);
+		if (match) {
+			event.startHours = parseInt(match[1], 10);
+			event.startMinutes = parseInt(match[2], 10);
+			var endHours = parseInt(match[3], 10);
+			var endMinutes = parseInt(match[4], 10);
+			event.duration = (endHours - event.startHours) * 60 + endMinutes - event.startMinutes;
+			if (endHours < event.startHours)
+				event.duration += 24 * 60;
+			return true;
+		}
+
+		var match = value.match(/([0-9]+:[0-9]+).*/);
+		if (match) {
+			event.startHours = parseInt(match[1], 10);
+			event.startMinutes = parseInt(match[2], 10);
+			return true;
+		}
+
+		var match = value.match(/([a-zA-Z]+), ([0-9]+)\.([0-9]+)\.[0-9]+.*/);
+		if (match) {
+			event.weekday = match[1];
+			event.day = parseInt(match[2], 10);
+			event.month = parseInt(match[3], 10);
+			event.date = match[2] + '.' + match[3] + '.';
+
+			if (!datesKnown[event.date]) {
+				dates.push({weekday: event.weekday, day: event.day, month: event.month, date: event.date});
+				datesKnown[event.date] = true;
+			}
+
+			return true;
+		}
+	});
+
+	if (!event.duration || event.duration < 30)
+		event.duration = 30;
+
+	if (event.day && event.startHours) {
+		events.push(event);
+		location.events.push(event);
+	}
+});
+
+$.each(events, function() {
+	var event = this;
+	event.left = ((event.day - dates[0].day) * 24 + event.startHours + event.startMinutes / 60) / dates.length / 24 * 100;
+	event.width = (event.duration / dates.length / 24 / 60 * 100);
+});
+
+locations.sort(function(location1, location2) {
+	return location1.name.localeCompare(location2.name);
+});
+
+locations = $.grep(locations, function(location) {
+	return location.events.length > 0;
+});
+
+var hours = [];
+for (var i=0; i<24; i++)
+	hours.push(i);
+
+var $output = $('.output');
+
+$output.html(MAIN_TEMPLATE({locations: locations, events: events, dates: dates, hours: hours, favoritesOnly: $('.js_favorites').is(':checked')}));
+$('.js_favorites').click(function() {
+	$output.html(MAIN_TEMPLATE({locations: locations, events: events, dates: dates, hours: hours, favoritesOnly: $('.js_favorites').is(':checked')}));
+});
+</script>
+
+</body>
+</html>
