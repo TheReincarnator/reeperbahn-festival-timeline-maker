@@ -1,6 +1,8 @@
 # Reeperbahn Festival Timeline Maker
 An HTML page that takes the current Reeperbahn Festival Programme, and your favorites, to create a timeline (a missing feature of the official website).
 
+![Reeperbahn Festival Programme to timeline](https://github.com/TheReincarnator/reeperbahn-festival-timeline-maker/raw/master/readme-graphic.png)
+
 ## Instructions
 
 1) Open https://www.reeperbahnfestival.com/de/festival/programm/sor/time/vie/list
